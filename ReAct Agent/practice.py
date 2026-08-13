@@ -20,7 +20,7 @@ llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.7, api_key=api_key
 
 
 class WeatherState(TypedDict):
-    message: Annotated[list, operator.add]
+    messages: Annotated[list, operator.add]
 
 
 @tool
@@ -30,7 +30,8 @@ def temperature_tool(city: str) -> float:
     
     url = f'https://api.openweathermap.org/data/2.5/weather?q={city}&appid={my_api}'
     response = requests.get(url)
-    return response.json()
+    data = response.json()
+    return data['main']['temp']
 
 @tool
 def convert_temperature(current: float):
@@ -51,13 +52,14 @@ def agent(state: WeatherState):
     "4. Immediately pass that Kelvin temperature into the `convert_temperature` tool to get Celsius.\n"
     "5. Provide the final temperature to the user in a clear, friendly sentence.\n"
     "Only use the provided tools. Do not invent weather data.")
-    messages = [system_prompt] + state['messages']
+    # messages = [system_prompt] + state['messages']
+    messages = [SystemMessage(content=system_prompt)] + state['messages']
     response = llm_with_tools.invoke(messages)
     return {"messages": [response]}
 def should_continue(state: WeatherState):
-    last_message = state['message'][-1]
+    last_message = state['messages'][-1]
     if last_message.tool_calls:
-        return 'tool'
+        return 'tools'
     return 'end'
 
 graph = StateGraph(WeatherState)
@@ -73,6 +75,21 @@ graph.add_conditional_edges(
         "end": END
     }
 )
+
+
 graph.add_edge("tools", "agent")
-print(temperature_tool.invoke('Peshawar')['main']['temp'])
-print("hello")
+# print(temperature_tool.invoke('Peshawar')['main']['temp'])
+# print("hello")
+
+app = graph.compile()
+conversation_history = []
+
+while True:
+    user_input = input("You: ")
+
+    if user_input.lower() in ["exit", "quit"]:
+        break
+    conversation_history.append(HumanMessage(content=user_input))
+    result = app.invoke({"messages": conversation_history})
+    conversation_history = result["messages"]
+    print("AI:", conversation_history)
