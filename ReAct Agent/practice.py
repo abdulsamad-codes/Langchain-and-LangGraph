@@ -3,6 +3,7 @@ from langchain_groq import ChatGroq
 from langchain.tools import tool, BaseTool
 from langchain_core.messages import HumanMessage, BaseMessage, AIMessage, SystemMessage
 from dotenv import load_dotenv
+from langgraph.prebuilt import ToolNode
 from typing import TypedDict, Annotated
 import requests
 import operator
@@ -50,9 +51,9 @@ def agent(state: WeatherState):
     "4. Immediately pass that Kelvin temperature into the `convert_temperature` tool to get Celsius.\n"
     "5. Provide the final temperature to the user in a clear, friendly sentence.\n"
     "Only use the provided tools. Do not invent weather data.")
-    result = llm_with_tools.invoke(state['message'] + system_prompt)
-    return result
-
+    messages = [system_prompt] + state['messages']
+    response = llm_with_tools.invoke(messages)
+    return {"messages": [response]}
 def should_continue(state: WeatherState):
     last_message = state['message'][-1]
     if last_message.tool_calls:
@@ -61,11 +62,14 @@ def should_continue(state: WeatherState):
 
 graph = StateGraph(WeatherState)
 graph.add_node("agent", agent)
+graph.add_node("tools", ToolNode(tools))
+
 graph.add_edge(START, "agent")
 graph.add_conditional_edges(
-    should_continue:
+    "agent",
+    should_continue,
     {
-        "tool": "tools"
+        "tools": "tools",
         "end": END
     }
 )
