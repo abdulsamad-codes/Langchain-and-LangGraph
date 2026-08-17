@@ -3,7 +3,7 @@ from typing import TypedDict
 from langgraph.graph import StateGraph, START,END
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
-
+import re
 
 class RAGState(TypedDict):
     file_path: str
@@ -20,18 +20,35 @@ def load_document(state: RAGState) -> dict:
     return {"raw_text": text}
 
 
-def chunk_document(state: RAGState, chunk_size: int = 1000, overlap: int = 100) -> dict:
-    """Node: splits the raw text into fixed-size overlapping chunks."""
+# def chunk_document(state: RAGState, chunk_size: int = 1000, overlap: int = 100) -> dict:
+#     """Node: splits the raw text into fixed-size overlapping chunks."""
+#     text = state["raw_text"]
+#     chunks = []
+#     start = 0
+#     while start < len(text):
+#         end = start + chunk_size
+#         chunks.append(text[start:end])
+#         if end >= len(text):
+#             break
+#         start = end - overlap
+#     return {"chunks": [c for c in chunks if c.strip()]}
+
+
+def chunk_document(state: RAGState) -> dict:
+    """Node: splits raw text into chunks by level-2 (##) heading sections.
+
+    Each chunk = one '## heading' plus everything under it, up to
+    (but not including) the next '## heading' or end of file.
+    Content before the first '##' (e.g. H1 intro paragraphs) is
+    intentionally skipped for now — that's a separate decision for later.
+    """
     text = state["raw_text"]
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = start + chunk_size
-        chunks.append(text[start:end])
-        if end >= len(text):
-            break
-        start = end - overlap
-    return {"chunks": [c for c in chunks if c.strip()]}
+
+    sections = re.split(r"(?m)(?=^## )", text)
+
+    chunks = [s.strip() for s in sections if s.strip().startswith("## ")]
+
+    return {"chunks": chunks}
 
 def embed_and_store(state: RAGState) -> dict:
     """Node: embeds all chunks and stores them in a Chroma vectorstore."""
