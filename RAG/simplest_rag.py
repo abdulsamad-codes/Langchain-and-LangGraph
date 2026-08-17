@@ -7,11 +7,12 @@ from langchain_chroma import Chroma
 
 class RAGState(TypedDict):
     file_path: str
-    raw_text: str        # path to the markdown file, set once at the start
-    chunks: list[str]     # populated by the chunking node during indexing
-    vectorstore: Chroma   # created once during indexing, reused by every query
-    query: str             # the current question, overwritten each loop turn
+    raw_text: str        
+    chunks: list[str]     
+    vectorstore: Chroma   
+    query: str            
     results: list[str]
+
 
 def load_document(state: RAGState) -> dict:
     """Node: reads the markdown file from disk."""
@@ -50,6 +51,7 @@ def check_exit(state: RAGState) -> str:
     return "continue"
 
 def search_chroma(state: RAGState) -> dict:
+    """ Node for searching our query (vector) in the chroma db"""
     results = state["vectorstore"].similarity_search(state["query"], k=3)
     return {"results": [r.page_content for r in results]}
 
@@ -58,17 +60,17 @@ def show_results(state: RAGState) -> dict:
     print("\n--- Top matches ---")
     for i, chunk in enumerate(state["results"], start=1):
         print(f"\n[{i}] {chunk}")
-    print("\n--------------------")
+    print("\n")
     return {}
 
 
 graph = StateGraph(RAGState)
 
-graph.add_node("get_query", get_query)
 graph.add_node("load_document", load_document)
 graph.add_node("chunk_document", chunk_document)
-graph.add_node("search_chroma", search_chroma)
 graph.add_node("embed_and_store", embed_and_store)
+graph.add_node("get_query", get_query)
+graph.add_node("search_chroma", search_chroma)
 graph.add_node("show_results", show_results)
 
 graph.set_entry_point("load_document")
@@ -87,4 +89,5 @@ graph.add_conditional_edges(
 graph.add_edge("show_results", "get_query")
 
 workflow = graph.compile()
-workflow.invoke()
+final_state = workflow.invoke({'file_path': 'data.md'})
+# print(final_state)
