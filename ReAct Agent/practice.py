@@ -10,6 +10,10 @@ import operator
 import os 
 # from pydantic import 
 
+from langgraph.checkpoint.memory import MemorySaver
+memory = MemorySaver()
+config = {"configurable": {"thread_id": "my_chat"}}
+
 
 
 load_dotenv()
@@ -56,6 +60,8 @@ def agent(state: WeatherState):
     messages = [SystemMessage(content=system_prompt)] + state['messages']
     response = llm_with_tools.invoke(messages)
     return {"messages": [response]}
+
+3
 def should_continue(state: WeatherState):
     last_message = state['messages'][-1]
     if last_message.tool_calls:
@@ -81,7 +87,7 @@ graph.add_edge("tools", "agent")
 # print(temperature_tool.invoke('Peshawar')['main']['temp'])
 # print("hello")
 
-app = graph.compile()
+app = graph.compile(checkpointer=memory)
 conversation_history = []
 
 while True:
@@ -89,7 +95,12 @@ while True:
 
     if user_input.lower() in ["exit", "quit"]:
         break
-    conversation_history.append(HumanMessage(content=user_input))
-    result = app.invoke({"messages": conversation_history})
-    conversation_history = result["messages"]
-    print("AI:", conversation_history)
+    # conversation_history.append(HumanMessage(content=user_input))
+    # result = app.invoke({"messages": conversation_history})
+    # conversation_history = result["messages"]
+    # print("AI:", conversation_history)
+    result = app.invoke(
+        {"messages": [HumanMessage(content=user_input)]},
+        config=config
+    )
+    print("AI:", result["messages"][-1].content)
