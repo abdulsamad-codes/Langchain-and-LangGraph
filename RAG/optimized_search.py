@@ -121,7 +121,7 @@ def get_query(state: RAGState) -> dict:
 
 def check_exit(state: RAGState) -> str:
     """Router: decides whether to end the loop or continue to the search step."""
-    if state["query"].strip().lower() in {"exit", "quit"}:
+    if state["query"].strip().lower() in {"exit", "quit" }:
         return "end"
     return "continue"
 
