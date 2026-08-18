@@ -5,14 +5,13 @@ from langgraph.prebuilt import ToolNode
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage
 from dotenv import load_dotenv
+from langgraph.checkpoint.memory import InMemorySaver
 
 from retriever import retrieve, catalog
 
 
 load_dotenv()
 
-# Format the catalog into readable text for the system prompt,
-# so the LLM knows what categories/titles exist to ask about.
 catalog_text = "\n".join(
     f"- Category: {c['category']} | Title: {c['title']}" for c in catalog
 )
@@ -54,12 +53,20 @@ graph.set_entry_point("call_llm")
 graph.add_conditional_edges("call_llm", should_continue, {"tools": "tools", "end": END})
 graph.add_edge("tools", "call_llm")
 
-workflow = graph.compile()
+
+memory = InMemorySaver()
+workflow = graph.compile(checkpointer=memory)
+# workflow = graph.compile()
 
 if __name__ == "__main__":
+    config = {"configurable": {"thread_id": "session-1"}}
     while True:
         query = input("\nAsk a question (or 'exit'): ")
         if query.lower() in {"exit", "quit"}:
             break
-        result = workflow.invoke({"messages": [{"role": "user", "content": query}]})
+
+        result = workflow.invoke(
+            {"messages": [{"role": "user", "content": query}]},
+            config=config,
+        )
         print("\n" + result["messages"][-1].content)

@@ -2,22 +2,16 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain.tools import tool
 
-# Must match the exact model used in ingestion.py — otherwise query
-# vectors and stored chunk vectors won't be comparable.
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-# Reopen the same persisted DB ingestion.py created. This does NOT
-# re-embed anything — it just loads what's already saved on disk.
 vectorstore = Chroma(
     persist_directory="./chroma_db",
     embedding_function=embeddings,
 )
 
-# Pull every stored chunk's metadata to build the (category, title) catalog.
 all_data = vectorstore.get()
 all_metadatas = all_data["metadatas"]
 
-# De-duplicate in case of any repeats, keep order stable.
 seen = set()
 catalog = []
 for m in all_metadatas:
@@ -57,8 +51,6 @@ def retrieve(query: str) -> str:
             where={"title": {"$in": list(set(matched_titles))}}
         )
         return "\n\n".join(results["documents"])
-
-    # --- 3rd weapon: fallback to vector similarity search ---
     docs = vectorstore.similarity_search(query, k=3)
     return "\n\n".join(d.page_content for d in docs)
 
