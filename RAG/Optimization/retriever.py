@@ -33,14 +33,12 @@ def retrieve(query: str) -> str:
     Tries matching by category first, then by title, then falls back
     to semantic vector search if neither matches."""
 
-    query_lower = query.lower()
+    query_upper = query.upper()
 
-    # --- 1st weapon: category match ---
-    # Check if any known category name appears (as text) inside the query.
     matched_categories = [
         c["category"] for c in catalog
-        if c["category"].lower() in query_lower
-    ]
+        if c["category"] in query_upper
+        ]
 
     if matched_categories:
         results = vectorstore.get(
@@ -50,9 +48,9 @@ def retrieve(query: str) -> str:
 
     # --- 2nd weapon: title match ---
     matched_titles = [
-        c["title"] for c in catalog
-        if c["title"].lower() in query_lower
-    ]
+    c["title"] for c in catalog
+    if c["title"] in query_upper
+]
 
     if matched_titles:
         results = vectorstore.get(
@@ -66,5 +64,3 @@ def retrieve(query: str) -> str:
 
 
 
-
-print(catalog)

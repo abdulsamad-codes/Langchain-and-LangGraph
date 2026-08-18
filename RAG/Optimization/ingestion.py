@@ -43,8 +43,8 @@ def chunk_document(text: str) -> list[dict]:
             title = section.split("\n", 1)[0].lstrip("# ").strip()
 
             chunks.append({
-                "category": category,
-                "title": title,
+                "category": category.upper(),
+                "title": title.upper(),
                 "content": section,
             })
 
