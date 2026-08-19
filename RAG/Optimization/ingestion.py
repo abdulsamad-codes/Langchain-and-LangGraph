@@ -64,7 +64,7 @@ def embed_and_store(chunks: list[dict], persist_directory: str = "./chroma_db") 
 
 
 def retrieval(query: str = None, category: str= None, title: str = None, k :int = 1):
-    
+    pass
 
 
 
