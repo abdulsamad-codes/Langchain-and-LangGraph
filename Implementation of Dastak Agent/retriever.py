@@ -27,7 +27,7 @@ from langchain.tools import tool
 from typing import Optional
 
 @tool
-def retrieve(query: str, category: Optional[str] = None, title: Optional[str] = None, k: int = 3) -> str:
+def retrieve(query: str, category: Optional[str] = None, title: Optional[str] = None, k: int = 1) -> str:
     """Retrieve document content from the Dastak KP Citizens app documentation.
     If the query clearly matches one of the known titles or categories listed
     in the system prompt, pass it as the 'title' or 'category' argument for an
